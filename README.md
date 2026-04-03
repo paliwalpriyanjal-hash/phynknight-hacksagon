@@ -92,14 +92,3 @@ This approach bridges the gap between **emergency detection and response**, ensu
 - Prepared for deep learning model training  
 
 ---
-
-## 📌 Hackathon Compliance  
-
-- Fresh repository created during hackathon  
-- Public repository maintained with regular commits  
-- No bulk or fake commits  
-- No pre-built or copied project used  
-- All development done during hackathon  
-- Fair play strictly followed  
-
----
