@@ -4,6 +4,7 @@ import { toast } from 'react-hot-toast'
 import axios from 'axios'
 import DashboardLayout from '../../components/DashboardLayout'
 import VoiceAnnouncement from '../../components/VoiceAnnouncement'
+import { predictImage } from '../../api/predict'
 
 // City → coordinates using OpenStreetMap Nominatim (free, no API key)
 function CitySearch({ onSelect }) {
@@ -103,6 +104,7 @@ export default function ReportEmergency() {
   const [isRecording, setIsRecording] = useState(false)
   const [location, setLocation] = useState(null)
   const [aiResult, setAiResult] = useState(null)
+  const [mlPrediction, setMlPrediction] = useState(null)
   const [loading, setLoading] = useState(false)
   const [cancelCountdown, setCancelCountdown] = useState(null)
   const [announcement, setAnnouncement] = useState(null)
@@ -134,9 +136,21 @@ export default function ReportEmergency() {
 
   const stopVoice = () => { recognitionRef.current?.stop(); setIsRecording(false); toast.success('Voice recorded!') }
 
+  const handlePrediction = async (file) => {
+    try {
+      const result = await predictImage(file);
+      setMlPrediction(result);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const handleImages = (e) => {
     const files = Array.from(e.target.files).slice(0, 5)
     setImages(prev => [...prev, ...files.map(f => ({ file: f, url: URL.createObjectURL(f) }))].slice(0, 5))
+    if (files.length > 0 && !mlPrediction) {
+      handlePrediction(files[0]);
+    }
   }
 
   const submitEmergency = async () => {
@@ -151,10 +165,17 @@ export default function ReportEmergency() {
       fd.append('location', JSON.stringify(location))
       images.forEach(img => fd.append('images', img.file))
       const res = await axios.post('/api/emergency/create', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
-      setAiResult(res.data)
+      let finalData = res.data
+      if (mlPrediction) {
+        // Enforce PyTorch Model overrides as per prompt instructions
+        finalData.riskLevel = mlPrediction.final_decision.toUpperCase()
+        finalData.explanation = mlPrediction.explanation
+        finalData.confidence = mlPrediction.confidence_percent
+      }
+      setAiResult(finalData)
       setStep(3)
-      const eta = res.data?.ambulanceEta || 10
-      const risk = res.data?.riskLevel || 'HIGH'
+      const eta = finalData?.ambulanceEta || 10
+      const risk = finalData?.riskLevel || 'HIGH'
       setAnnouncement(risk === 'HIGH'
         ? `Your emergency report has been submitted successfully. An ambulance has been dispatched and will arrive in approximately ${eta} minutes. Please stay calm and remain at your location. Help is on the way.`
         : `Your report has been submitted. Our medical team has been notified. Please follow the first aid instructions on screen and stay calm.`)
