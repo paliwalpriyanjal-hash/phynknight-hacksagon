@@ -50,7 +50,5 @@ app.get('/api/health', (req, res) => {
 
 const PORT = process.env.PORT || 5001
 app.listen(PORT, () => {
-  console.log(`\n🚑 MediSync Server running on port ${PORT}`)
-  console.log(`🌐 API: http://localhost:${PORT}/api`)
-  console.log(`🤖 Flask ML: ${process.env.FLASK_URL || 'http://localhost:5002'}`)
+ 
 })
